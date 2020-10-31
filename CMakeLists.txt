@@ -1,0 +1,69 @@
+cmake_minimum_required(VERSION 3.4.3 FATAL_ERROR)
+
+project(ICONEX C)
+enable_testing()
+
+find_package(AnyDSL_runtime REQUIRED)
+include_directories(${AnyDSL_runtime_INCLUDE_DIRS})
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
+find_package(NetCDF REQUIRED)
+
+set(BACKEND ${BACKEND} CACHE STRING "select the backend from the following: CPU")
+if(NOT BACKEND)
+    set(BACKEND cpu CACHE STRING "select the backend from the following: CPU" FORCE)
+endif()
+string(TOLOWER "${BACKEND}" BACKEND)
+message(STATUS "Selected backend: ${BACKEND}")
+
+set(BACKEND_FILE src/be/backend_${BACKEND}.impala)
+
+set(DEVICE "cpu")
+
+set(CLANG_FLAGS -march=native)
+set(IMPALA_FLAGS --log-level info)
+set(ANYDSL_RUNTIME_LIBRARIES ${AnyDSL_runtime_LIBRARIES})
+
+set(CLIMATE_FILES
+    src/be/device_${DEVICE}.impala
+    src/be/backend_${BACKEND}.impala
+    src/ops.impala
+)
+
+anydsl_runtime_wrap(ICONEX_OBJS
+    CLANG_FLAGS ${CLANG_FLAGS}
+    IMPALA_FLAGS ${IMPALA_FLAGS}
+    NAME iconex
+    FILES ${CLIMATE_FILES})
+
+add_executable(global_div src/utils.c src/grid.c tests/global_div.c ${ICONEX_OBJS})
+target_include_directories(global_div PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(global_div ${ANYDSL_RUNTIME_LIBRARIES} ${NETCDF_LIBRARIES_C})
+
+add_executable(local_vel_filter src/utils.c src/grid.c tests/local_vel_filter.c ${ICONEX_OBJS})
+target_include_directories(local_vel_filter PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(local_vel_filter ${ANYDSL_RUNTIME_LIBRARIES} ${NETCDF_LIBRARIES_C})
+
+include(ExternalProject)
+
+# Download file
+ExternalProject_Add(
+    gridfile
+    PREFIX "${CMAKE_BINARY_DIR}"
+    URL http://icon-downloads.mpimet.mpg.de/grids/public/mpim/0019/icon_grid_0019_R02B05_G.nc
+    DOWNLOAD_NO_EXTRACT 1
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
+)
+add_dependencies(global_div gridfile)
+add_dependencies(local_vel_filter gridfile)
+
+add_custom_target(check
+  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/scripts/benchmark.sh ${CMAKE_CURRENT_BINARY_DIR}/benchmark.sh
+  COMMAND sh ${CMAKE_CURRENT_BINARY_DIR}/benchmark.sh
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  DEPENDS global_div
+)
+
+
