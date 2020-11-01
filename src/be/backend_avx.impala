@@ -9,7 +9,9 @@ fn @is_avx() -> bool { true }
 fn @is_avx2() -> bool { false }
 
 fn @get_vector_length() -> i32 { 8 }
-fn @get_thread_count() -> i32 { 4 }
+extern "C" { fn get_thread_count() -> i32; }
+
+fn @round_up(num: i32, multiple: i32) -> i32 { ((num + multiple - 1) / multiple) * multiple }
 
 // amount of full vector iterations that trigger loop vectorization
 static simd_iter_threshold = 2;

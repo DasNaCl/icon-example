@@ -4,6 +4,11 @@
 
 #include "utils.h"
 
+#ifdef CPU_DEVICE
+#include <be/cpu_threads.h>
+#endif
+
+
 size_t*
 create_random_array_size_t(const size_t size,
                            const size_t min,
