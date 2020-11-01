@@ -14,3 +14,31 @@ fn @is_sse() -> bool { false }
 fn @is_avx() -> bool { false }
 fn @is_avx2() -> bool { false }
 fn @has_ldg() -> bool { false }
+
+static block_w = 32;
+static block_h = 2;
+
+fn @outer_loop(min : i32, max : i32, body : fn(i32) -> ()) -> () {
+  let acc = accelerator(device_id);
+
+  let num_blocks = ceil_div(subset.count, block_w);
+
+  let block = (512, 1, 1);
+  let grid  = (num_blocks * block_w, 1, 1);
+
+  for work in acc.exec(grid, block) {
+      let id = work.tidx() + block_w * (work.tidy() + block_h * (work.bidx() + work.gdimx() * work.bidy()));
+
+      if id >= subset.count {
+        continue()
+      }
+
+      // TODO: copy to shared memory?
+
+      @@body(id);
+  }
+  acc.sync();
+}
+
+
+
