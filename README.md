@@ -25,9 +25,17 @@ cmake -DBACKEND=cpu \
 ./iconex
 ```
 
-Currently, only the `cpu` backend is supported.
+Supported backends:
+
+- `cpu`
+- `avx`
+
+
+Note that for CPU-based backends, you may choose a sensible number of threads via `-DNO_OF_THREADS=$(nproc)`.
 
 # Benchmarks
 
-TODO. :-)
+Run the benchmarks using `make check`.
+
+TODO: Insert graph. :-)
 
