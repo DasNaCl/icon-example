@@ -55,3 +55,42 @@ fn @inner_loop_step(lower: i32, upper: i32, step: i32, body: fn(i32) -> ()) -> (
         range_step(remainder_start, upper, step, body);
     }
 }
+
+
+fn @connectivity_to_device(connectivity : &GridConnectivity) -> GridConnectivityView {
+  GridConnectivityView {
+    src_count : @|| connectivity.src_count as i32,
+    trg_count : @|| connectivity.trg_count as i32,
+    matrix : @|u| connectivity.matrix(u as u32)
+  }
+}
+
+fn @subset_to_device(subset : &GridSubset) -> GridSubsetView {
+  GridSubsetView {
+    count : @|| subset.count as i32,
+    indices : @|u| subset.indices(u as u32)
+  }
+}
+
+fn @values_to_device(count : u32, values : &[f64]) -> GenericView {
+  GenericView {
+    read : @|u| bitcast[&[1][f64]](values)(u as i32),
+    write : @|u,v| bitcast[&mut[1][f64]](values)(u as i32) = v,
+
+    buf : undef[Buffer]()
+  }
+}
+
+
+fn @output_of_device(count : u32, out : &mut[f64]) -> GenericView {
+  GenericView {
+    read : @|u| bitcast[&[1][f64]](out)(u as i32),
+    write : @|u,v| bitcast[&mut[1][f64]](out)(u as i32) = v,
+
+    buf : undef[Buffer]()
+  }
+}
+
+fn @output_to_host(count : u32, from : GenericView, to : &mut[f64]) -> () {
+  // we are the host!
+}

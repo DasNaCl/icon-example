@@ -9,9 +9,9 @@ include_directories(${AnyDSL_runtime_INCLUDE_DIRS})
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
 find_package(NetCDF REQUIRED)
 
-set(BACKEND ${BACKEND} CACHE STRING "select the backend from the following: CPU, AVX")
+set(BACKEND ${BACKEND} CACHE STRING "select the backend from the following: CPU, AVX, AMDGPU, NVVM")
 if(NOT BACKEND)
-  set(BACKEND cpu CACHE STRING "select the backend from the following: CPU, AVX" FORCE)
+  set(BACKEND cpu CACHE STRING "select the backend from the following: CPU, AVX, AMDGPU, NVVM" FORCE)
 endif()
 string(TOLOWER "${BACKEND}" BACKEND)
 message(STATUS "Selected backend: ${BACKEND}")
@@ -40,6 +40,7 @@ set(ANYDSL_RUNTIME_LIBRARIES ${AnyDSL_runtime_LIBRARIES})
 set(CLIMATE_FILES
     src/be/device_${DEVICE}.impala
     src/be/backend_${BACKEND}.impala
+    src/grid.impala
     src/ops.impala
 )
 

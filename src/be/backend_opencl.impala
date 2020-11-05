@@ -16,29 +16,92 @@ fn @is_avx2() -> bool { false }
 fn @has_ldg() -> bool { false }
 
 static block_w = 32;
-static block_h = 2;
+static block_h = 1;
+
+fn @round_up(num: i32, multiple: i32) -> i32 { ((num + multiple - 1) / multiple) * multiple }
 
 fn @outer_loop(min : i32, max : i32, body : fn(i32) -> ()) -> () {
   let acc = accelerator(device_id);
 
-  let num_blocks = ceil_div(subset.count, block_w);
-
-  let block = (512, 1, 1);
-  let grid  = (num_blocks * block_w, 1, 1);
+  let grid = (round_up((max - min) / block_h, block_w), 1, 1);
+  let block = (block_w, block_h, 1);
 
   for work in acc.exec(grid, block) {
-      let id = work.tidx() + block_w * (work.tidy() + block_h * (work.bidx() + work.gdimx() * work.bidy()));
+    let id = work.bidx() * work.bdimx() + work.tidx();//work.tidx() + block_w * (work.tidy() + block_h * (work.bidx() + work.gdimx() * work.bidy()));
 
-      if id >= subset.count {
-        continue()
-      }
-
-      // TODO: copy to shared memory?
-
-      @@body(id);
+    if id < (max - min) {
+        @@body(min + id);
+    }
   }
   acc.sync();
 }
 
+fn @inner_loop(lower: i32, upper: i32, body: fn(i32) -> ()) -> () {
+  unroll(lower, upper, body)
+}
+fn @inner_loop_step(lower: i32, upper: i32, step: i32, body: fn(i32) -> ()) -> () {
+  unroll_step(lower, upper, step, body)
+}
+
+fn @connectivity_to_device(connectivity : &GridConnectivity) -> GridConnectivityView {
+  let acc = accelerator(device_id);
+
+  let size = (connectivity.src_count * connectivity.trg_count) as i64;
+  let buf = acc.alloc(size * sizeof[u32]());
+  copy(Buffer { data : bitcast[&[i8]](connectivity.matrix), size : size * sizeof[u32](), device : 0 }, buf);
+
+  let src = connectivity.src_count as i32;
+  let trg = connectivity.trg_count as i32;
+  GridConnectivityView {
+    src_count : @|| src,
+    trg_count : @|| trg,
+    matrix : @|u| bitcast[&[1][u32]](buf.data)(u)
+  }
+}
+
+fn @subset_to_device(subset : &GridSubset) -> GridSubsetView {
+  let acc = accelerator(device_id);
+
+  let buf = acc.alloc((subset.count as i64) * sizeof[u32]());
+  copy(Buffer { data : bitcast[&[i8]](subset.indices), size : (subset.count as i64) * sizeof[u32](), device : 0 }, buf);
+
+  let count = subset.count as i32;
+
+  GridSubsetView {
+    count : @|| count,
+    indices : @|u| bitcast[&[1][u32]](buf.data)(u as u32)
+  }
+}
+
+fn @values_to_device(count : u32, values : &[f64]) -> GenericView {
+  let acc = accelerator(device_id);
+
+  let size = (count as i64) * sizeof[f64]();
+  let buf = acc.alloc(size);
+  copy(Buffer { data : bitcast[&[i8]](values), size : size, device : 0 }, buf);
+
+  GenericView {
+    read : @|u| bitcast[&[1][f64]](buf.data)(u as i32),
+    write : @|u,v| bitcast[&mut[1][f64]](buf.data)(u as i32) = v,
+
+    buf : buf
+  }
+}
 
 
+fn @output_of_device(count : u32, out : &mut[f64]) -> GenericView {
+  let acc = accelerator(device_id);
+
+  let buf = acc.alloc(sizeof[f64]() * (count as i64));
+
+  GenericView {
+    read : @|u| bitcast[&[1][f64]](buf.data)(u as i32),
+    write : @|u,v| bitcast[&mut[1][f64]](buf.data)(u as i32) = v,
+
+    buf : buf
+  }
+}
+
+fn @output_to_host(count : u32, from : GenericView, to : &mut[f64]) -> () {
+  copy(from.buf, Buffer { data : bitcast[&[i8]](to), size : (count as i64) * sizeof[f64](), device : 0 });
+}

@@ -1,0 +1,52 @@
+
+
+// Legacy Structures
+static EDGE = 0 as u32;
+static VERT = 1 as u32;
+static CELL = 2 as u32;
+
+struct GridConnectivity {
+  src_count : u32,
+  trg_count : u32,
+  matrix : &[u32]
+};
+
+struct LatLonRad {
+  lat : f64,
+  lon : f64
+};
+
+struct Grid {
+  counts : [u32 * 3],
+  connectivities : [[&GridConnectivity * 3] * 3],
+  coordinates : [&LatLonRad * 3]
+};
+
+struct GridSubset {
+  count : u32,
+  indices : &[u32],
+  grid : &Grid,
+  entity : u32
+};
+
+
+// Data accessor abstractions
+struct GridConnectivityView {
+  src_count : fn() -> i32,
+  trg_count : fn() -> i32,
+  matrix : fn(u32) -> u32
+};
+
+struct GridSubsetView {
+  count : fn() -> i32,
+  indices : fn(i32) -> u32,
+
+  // At the moment, grid and entity are not needed
+};
+
+struct GenericView {
+  read : fn(u32) -> f64,
+  write : fn(u32, f64) -> (),
+
+  buf : Buffer
+};

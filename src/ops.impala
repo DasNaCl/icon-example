@@ -1,68 +1,57 @@
 
 
-struct GridConnectivity {
-  src_count : u32,
-  trg_count : u32,
-  matrix : &[u32]
-};
-
-struct LatLonRad {
-  lat : f64,
-  lon : f64
-};
-
-struct Grid {
-  counts : &[u32],
-  connectivities : &[&GridConnectivity],
-  coordinates : &[&LatLonRad]
-};
-
-struct GridSubset {
-  count : u32,
-  indices : &[u32],
-  grid : &Grid,
-  entity : i32
-};
-
 extern
-fn calc_wsum_generic(output : &mut[f64], subset : &GridSubset, connectivity : &GridConnectivity,
-                      values : &[f64], weights : &[f64], level_count : u32) -> () {
-//  for output_idx in parallel(8, 0, subset.count as i32) { //range(0, (*subset).count as i32) {
-  for output_idx in outer_loop(0, subset.count as i32) {
+fn calc_wsum_generic(out : &mut[f64], sub : &GridSubset, conn : &GridConnectivity,
+                      vals : &[f64], wghts : &[f64], level_count : u32) -> () {
+  let connectivity = connectivity_to_device(conn);
+  let subset = subset_to_device(sub);
+  let values = values_to_device(sub.grid.counts(EDGE) * level_count, vals);
+  let weights = values_to_device(sub.grid.counts(CELL) * sub.grid.connectivities(CELL)(EDGE).trg_count, wghts);
+
+  let output_size = sub.grid.counts(CELL) * level_count;
+  let output = output_of_device(output_size, out);
+
+  for output_idx in outer_loop(0, subset.count()) {
     let entity_idx = subset.indices(output_idx);
 
     for level_idx in inner_loop(0, level_count as i32) {
       let mut result = 0.0 as f64;
-      for connect_idx in inner_loop(0, connectivity.trg_count as i32) {
-        let flat_connect_idx = (entity_idx as i32) * (connectivity.trg_count as i32) + (connect_idx as i32);
+      for connect_idx in inner_loop(0, connectivity.trg_count()) {
+        let flat_connect_idx = entity_idx * (connectivity.trg_count() as u32) + connect_idx as u32;
         let flat_values_idx  = connectivity.matrix(flat_connect_idx) * level_count + (level_idx as u32);
 
-        result += (values(flat_values_idx as u32) as f64) * (weights(flat_connect_idx as u32) as f64);
+        result += values.read(flat_values_idx as u32) * weights.read(flat_connect_idx as u32);
       }
 
-      output((output_idx as u32) * (level_count as u32) + (level_idx as u32)) = result;
+      output.write((output_idx as u32) * (level_count as u32) + (level_idx as u32), result);
     }
   }
+
+  output_to_host(output_size, output, out);
   ()
 }
 
 
 extern
-fn calc_wsum_triangle(output : &mut[f64], subset : &GridSubset, connectivity : &GridConnectivity,
+fn calc_wsum_triangle(out : &mut[f64], sub : &GridSubset, conn : &GridConnectivity,
                       values : &[f64], weights : &[f64], level_count : u32) -> () {
+  let connectivity = connectivity_to_device(conn);
+  let subset = subset_to_device(sub);
+  let output = output_of_device(sub.grid.counts(2) * level_count, out);
 
-  for output_idx in outer_loop(0, subset.count as i32) {
+  for output_idx in outer_loop(0, subset.count()) {
     let entity_idx = subset.indices(output_idx);
-    let first_connect_idx = entity_idx * connectivity.trg_count as u32;
-    let values_idcs = &connectivity.matrix(first_connect_idx);
+    let first_connect_idx = entity_idx * connectivity.trg_count() as u32;
 
     for level_idx in inner_loop(0, level_count as i32) {
-      output((output_idx as u32) * (level_count as u32) + (level_idx as u32)) = 
+      output.write((output_idx as u32) * (level_count as u32) + (level_idx as u32),
         (values(connectivity.matrix(first_connect_idx + 0 as u32) * level_count + level_idx as u32) as f64) * (weights(first_connect_idx + 0 as u32) as f64) +
         (values(connectivity.matrix(first_connect_idx + 1 as u32) * level_count + level_idx as u32) as f64) * (weights(first_connect_idx + 1 as u32) as f64) +
-        (values(connectivity.matrix(first_connect_idx + 2 as u32) * level_count + level_idx as u32) as f64) * (weights(first_connect_idx + 2 as u32) as f64);
+        (values(connectivity.matrix(first_connect_idx + 2 as u32) * level_count + level_idx as u32) as f64) * (weights(first_connect_idx + 2 as u32) as f64));
     }
   }
+
+  output_to_host(sub.grid.counts(2) * level_count, output, out);
   ()
 }
 
