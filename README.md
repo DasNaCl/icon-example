@@ -22,20 +22,28 @@ mkdir path/to/anydsl/iconex/build
 cd "$_"  # the "$_" contains the argument to the previous command
 cmake -DBACKEND=cpu \
       -DAnyDSL_runtime_DIR="$_"/../../runtime/build/share/anydsl/cmake/
-./iconex
+make check
 ```
 
 Supported backends:
 
 - `cpu`
 - `avx`
+- `nvvm`
+- `cuda`
+- `amdgpu`
 
-
-Note that for CPU-based backends, you may choose a sensible number of threads via `-DNO_OF_THREADS=$(nproc)`.
+Note that for `cpu` and `avx` backends, you may choose a sensible number of threads via `-DNO_OF_THREADS=$(nproc)`.
 
 # Benchmarks
 
 Run the benchmarks using `make check`.
+This will *always* run the `cpu` backend up to `$(nproc)` threads.
+You may add more backends by specifying the `ICONEX_BENCH` environment variable, it's contents will be run after the cpu backend.
+Suppose you want to run the benchmark script for `cpu`, `avx`, and `cuda`, the order of commands would look as follows:
+```bash
+ICONEX_BENCH="avx cuda" make check
+```
 
 TODO: Insert graph. :-)
 
