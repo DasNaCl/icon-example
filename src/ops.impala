@@ -1,8 +1,7 @@
 
 
-extern
-fn calc_wsum_generic(out : &mut[f64], sub : &GridSubset, conn : &GridConnectivity,
-                      vals : &[f64], wghts : &[f64], level_count : u32) -> () {
+fn @generic_call(out : &mut[f64], sub : &GridSubset, conn : &GridConnectivity,
+                 vals : &[f64], wghts : &[f64], level_count : u32, trg_count : i32) -> () {
   let connectivity = connectivity_to_device(conn);
   let subset = subset_to_device(sub);
   let values = values_to_device(sub.grid.counts(EDGE) * level_count, vals);
@@ -16,13 +15,12 @@ fn calc_wsum_generic(out : &mut[f64], sub : &GridSubset, conn : &GridConnectivit
 
     for level_idx in inner_loop(0, level_count as i32) {
       let mut result = 0.0 as f64;
-      for connect_idx in inner_loop(0, connectivity.trg_count()) {
-        let flat_connect_idx = entity_idx * (connectivity.trg_count() as u32) + connect_idx as u32;
+      for connect_idx in inner_loop(0, trg_count) {
+        let flat_connect_idx = entity_idx * (trg_count as u32) + connect_idx as u32;
         let flat_values_idx  = connectivity.matrix(flat_connect_idx) * level_count + (level_idx as u32);
 
         result += values.read(flat_values_idx as u32) * weights.read(flat_connect_idx as u32);
       }
-
       output.write((output_idx as u32) * (level_count as u32) + (level_idx as u32), result);
     }
   }
@@ -31,28 +29,15 @@ fn calc_wsum_generic(out : &mut[f64], sub : &GridSubset, conn : &GridConnectivit
   ()
 }
 
-
 extern
-fn calc_wsum_triangle(out : &mut[f64], sub : &GridSubset, conn : &GridConnectivity,
-                      values : &[f64], weights : &[f64], level_count : u32) -> () {
-  let connectivity = connectivity_to_device(conn);
-  let subset = subset_to_device(sub);
-  let output = output_of_device(sub.grid.counts(2) * level_count, out);
-
-  for output_idx in outer_loop(0, subset.count()) {
-    let entity_idx = subset.indices(output_idx);
-    let first_connect_idx = entity_idx * connectivity.trg_count() as u32;
-
-    for level_idx in inner_loop(0, level_count as i32) {
-      output.write((output_idx as u32) * (level_count as u32) + (level_idx as u32),
-        (values(connectivity.matrix(first_connect_idx + 0 as u32) * level_count + level_idx as u32) as f64) * (weights(first_connect_idx + 0 as u32) as f64) +
-        (values(connectivity.matrix(first_connect_idx + 1 as u32) * level_count + level_idx as u32) as f64) * (weights(first_connect_idx + 1 as u32) as f64) +
-        (values(connectivity.matrix(first_connect_idx + 2 as u32) * level_count + level_idx as u32) as f64) * (weights(first_connect_idx + 2 as u32) as f64));
-    }
-  }
-
-  output_to_host(sub.grid.counts(2) * level_count, output, out);
-  ()
+fn calc_wsum_generic(out : &mut[f64], sub : &GridSubset, conn : &GridConnectivity,
+                      vals : &[f64], wghts : &[f64], level_count : u32) -> () {
+  @@generic_call(out, sub, conn, vals, wghts, level_count, conn.trg_count as i32)
 }
 
 
+extern
+fn calc_wsum_triangle(out : &mut[f64], sub : &GridSubset, conn : &GridConnectivity,
+                      vals : &[f64], wghts : &[f64], level_count : u32) -> () {
+  @@generic_call(out, sub, conn, vals, wghts, level_count, 3)
+}
