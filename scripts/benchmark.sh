@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+source ./bench_env.sh
+
 grid=src/icon_grid_0019_R02B05_G.nc
 lvl_count=40
 iter_count=50

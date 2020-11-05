@@ -15,6 +15,7 @@ if(NOT BACKEND)
 endif()
 string(TOLOWER "${BACKEND}" BACKEND)
 message(STATUS "Selected backend: ${BACKEND}")
+set(ENV{ICONEX_BENCH} "${BACKEND}")
 
 set(BACKEND_FILE src/be/backend_${BACKEND}.impala)
 
@@ -73,11 +74,14 @@ ExternalProject_Add(
 add_dependencies(global_div gridfile)
 add_dependencies(local_vel_filter gridfile)
 
+set(env_icnoex_bench_sh ${CMAKE_CURRENT_BINARY_DIR}/bench_env.sh)
+file(WRITE ${env_icnoex_bench_sh} "#!/usr/bin/env bash\nexport ICONEX_BENCH=\"${BACKEND}\"")
+execute_process(COMMAND chmod a+x ${env_icnoex_bench_sh} RESULT_VARIABLE res)
+
 add_custom_target(check
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/scripts/benchmark.sh ${CMAKE_CURRENT_BINARY_DIR}/benchmark.sh
   COMMAND sh ${CMAKE_CURRENT_BINARY_DIR}/benchmark.sh
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   DEPENDS global_div
 )
-
 

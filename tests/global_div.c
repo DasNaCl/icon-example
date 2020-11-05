@@ -60,14 +60,14 @@ int main(int argc, char *argv[])
 
   printf("Operation time, ms: %f\n", elapsed_ms);
 
-  /*
+#ifdef ICONEX_VERIFY
   FILE* f = fopen("output", "w");
   for(size_t i = 0; i < grid->counts[CELL] * level_count; ++i)
   {
     fprintf(f, "%f\n", div_var[i]);
   }
   fclose(f);
-  */
+#endif
 
   free_grid_subset(subset);
   free_grid(grid);

@@ -44,6 +44,8 @@ Suppose you want to run the benchmark script for `cpu`, `avx`, and `cuda`, the o
 ```bash
 ICONEX_BENCH="avx cuda" make check
 ```
+The `CMakeLists.txt` is setup in a way to source this variable automagically according to the chosen backend.
+For example, if you built for `avx` and want to bench this, it suffices to call `make check` without any environment variable tampering.
 
 TODO: Insert graph. :-)
 
