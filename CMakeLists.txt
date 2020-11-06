@@ -43,6 +43,7 @@ set(CLIMATE_FILES
     src/be/backend_${BACKEND}.impala
     src/grid.impala
     src/ops.impala
+    src/utils.impala
 )
 
 anydsl_runtime_wrap(ICONEX_OBJS

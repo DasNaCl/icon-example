@@ -11,6 +11,10 @@ fn @is_avx2() -> bool { false }
 fn @get_vector_length() -> i32 { 8 }
 extern "C" { fn get_thread_count() -> i32; }
 
+fn @benchmark_kernel(body : fn() -> ()) -> () {
+  benchmark_cpu(body)
+}
+
 fn @round_up(num: i32, multiple: i32) -> i32 { ((num + multiple - 1) / multiple) * multiple }
 
 // amount of full vector iterations that trigger loop vectorization
@@ -68,7 +72,10 @@ fn @connectivity_to_device(connectivity : &GridConnectivity) -> GridConnectivity
 fn @subset_to_device(subset : &GridSubset) -> GridSubsetView {
   GridSubsetView {
     count : @|| subset.count as i32,
-    indices : @|u| subset.indices(u as u32)
+    indices : @|u| subset.indices(u as u32),
+
+    iterate : mk_iter_over_grid_subset(GenericU32View { read : @|u| subset.indices(u as u32) },
+                                       subset)
   }
 }
 

@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <math.h>
 
 #ifdef _OPENMP
@@ -80,16 +79,7 @@ int main(int argc, char *argv[])
 
   double *output_vels = (double*) malloc(sizeof(double) * subset->count * level_count);
 
-  struct timespec start, finish;
-  clock_gettime(CLOCK_MONOTONIC, &start);
-
   calc_wsum_generic(output_vels, subset, e2e, input_vels, weights, level_count);
-
-  clock_gettime(CLOCK_MONOTONIC, &finish);
-
-  double elapsed_ms = (finish.tv_sec - start.tv_sec) * 1000.0 + (finish.tv_nsec - start.tv_nsec) * 1e-6;
-
-  printf("Operation time, ms: %f\n", elapsed_ms);
 
   free_grid(grid);
   free_grid_connectivity(e2e);

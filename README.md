@@ -37,15 +37,12 @@ Note that for `cpu` and `avx` backends, you may choose a sensible number of thre
 
 # Benchmarks
 
-Run the benchmarks using `make check`.
-This will *always* run the `cpu` backend up to `$(nproc)` threads.
-You may add more backends by specifying the `ICONEX_BENCH` environment variable, it's contents will be run after the cpu backend.
-Suppose you want to run the benchmark script for `cpu`, `avx`, and `cuda`, the order of commands would look as follows:
+Run the benchmarks for the backend you chose in CMake using `make check`.
+You may specify more backends by setting the `ICONEX_BENCH` environment variable.
+Suppose you want to run the benchmark script for `cpu`, `avx`, and `cuda`:
 ```bash
-ICONEX_BENCH="avx cuda" make check
+ICONEX_BENCH="cpu avx cuda" make check
 ```
-The `CMakeLists.txt` is setup in a way to source this variable automagically according to the chosen backend.
-For example, if you built for `avx` and want to bench this, it suffices to call `make check` without any environment variable tampering.
 
 TODO: Insert graph. :-)
 

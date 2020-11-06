@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <strings.h>
 
 #include "utils.h"
 
@@ -98,5 +99,21 @@ print_edge_connections(const struct Grid *grid,
       printf(" %zu", c2e->matrix[c2e->tgt_count * cell_idx + j]);
     printf("\n");
   }
+}
+
+int64_t*
+create_bench_array(const size_t size)
+{
+  return malloc(size * sizeof(uint64_t));
+}
+
+int
+anydsl_is_profiling()
+{
+  const char* env_var = getenv("ANYDSL_PROFILE");
+  if (env_var) {
+    return strcasecmp(env_var, "full");
+  }
+  return -1;
 }
 

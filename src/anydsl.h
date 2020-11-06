@@ -25,4 +25,3 @@ void calc_wsum_triangle(double* output,
                         const double *values,
                         const double *weights,
                         const uint32_t level_count);
-

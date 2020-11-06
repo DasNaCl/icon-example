@@ -42,6 +42,8 @@ struct GridSubsetView {
   indices : fn(i32) -> u32,
 
   // At the moment, grid and entity are not needed
+
+  iterate : fn(u32, i32, fn(u32, i32, u32) -> ()) -> ()
 };
 
 struct GenericView {
@@ -50,3 +52,62 @@ struct GenericView {
 
   buf : Buffer
 };
+struct GenericU32View {
+  read : fn(u32) -> u32
+};
+
+
+fn @mk_iter_over_grid_subset(buf : GenericU32View, subset : &GridSubset) -> (fn(u32, i32, fn(u32, i32, u32) -> ()) -> ()) {
+  let count = subset.count as i32;
+
+  @|lv_count,trg_count,body| {
+    for output_idx in outer_loop(0, count as i32) {
+      let entity_idx = (buf.read(output_idx as u32) as i32) * trg_count;
+      for level_idx in inner_loop(0, lv_count as i32) {
+        @@body((output_idx as u32) * lv_count,entity_idx,level_idx as u32)
+      }
+    }
+  }
+}
+
+
+struct IterInfo {
+  connectivity : GridConnectivityView,
+  subset : GridSubsetView,
+  values : GenericView,
+  weights : GenericView,
+  output : GenericView
+};
+
+fn @handle_io(out : &mut[f64], sub : &GridSubset, conn : &GridConnectivity,
+              vals : &[f64], wghts : &[f64], level_count : u32)
+              -> (IterInfo, u32)
+{
+  let connectivity = connectivity_to_device(conn);
+  let subset = subset_to_device(sub);
+  let values = values_to_device(sub.grid.counts(EDGE) * level_count, vals);
+  let weights = values_to_device(sub.grid.counts(CELL) * sub.grid.connectivities(CELL)(EDGE).trg_count, wghts);
+
+  let output_size = sub.grid.counts(CELL) * level_count;
+  let output = output_of_device(output_size, out);
+
+  (IterInfo {
+    connectivity : connectivity,
+    subset : subset,
+    values : values,
+    weights : weights,
+    output : output
+  },
+  output_size)
+}
+
+fn @fetch_data(info : IterInfo, entity_idx : i32,
+               level_count : u32, level_idx : u32, trg_count : i32,
+               body : fn(f64,f64) -> ()) -> () {
+  for connect_idx in unroll(0, trg_count) {
+    let flat_connect_idx = (entity_idx + connect_idx) as u32;
+    let flat_values_idx = info.connectivity.matrix(flat_connect_idx) * level_count + (level_idx as u32);
+
+    @@body(info.values.read(flat_values_idx as u32), info.weights.read(flat_connect_idx as u32));
+  }
+}

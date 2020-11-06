@@ -19,4 +19,11 @@ void
 print_edge_connections(const struct Grid *grid,
                        const size_t edge_idx);
 
+
+int64_t*
+create_bench_array(const size_t size);
+
+int
+anydsl_is_profiling();
+
 #endif // UTILS_H

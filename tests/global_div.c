@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 
 #include <anydsl.h>
 #include <grid.h>
@@ -49,16 +48,7 @@ int main(int argc, char *argv[])
   double *div_factors = create_random_array_double(grid->counts[CELL] * grid->connectivities[CELL][EDGE]->tgt_count, 0.2, 0.4);
   struct GridSubset *subset = create_grid_subset_all(grid, CELL);
 
-  struct timespec start, finish;
-  clock_gettime(CLOCK_MONOTONIC, &start);
-
   calc_wsum_function(div_var, subset, grid->connectivities[CELL][EDGE], flux_var, div_factors, level_count);
-
-  clock_gettime(CLOCK_MONOTONIC, &finish);
-
-  double elapsed_ms = (finish.tv_sec - start.tv_sec) * 1000.0 + (finish.tv_nsec - start.tv_nsec) * 1e-6;
-
-  printf("Operation time, ms: %f\n", elapsed_ms);
 
 #ifdef ICONEX_VERIFY
   FILE* f = fopen("output", "w");

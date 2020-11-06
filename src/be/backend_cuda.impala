@@ -15,6 +15,12 @@ fn @is_avx() -> bool { false }
 fn @is_avx2() -> bool { false }
 fn @has_ldg() -> bool { true }
 
+fn @benchmark_kernel(body : fn() -> ()) -> () {
+  let acc = accelerator(device_id);
+
+  benchmark_acc(acc, body)
+}
+
 static block_w = 32;
 static block_h = 1;
 
@@ -47,6 +53,7 @@ fn @connectivity_to_device(connectivity : &GridConnectivity) -> GridConnectivity
   let acc = accelerator(device_id);
 
   let size = (connectivity.src_count * connectivity.trg_count) as i64;
+
   let buf = acc.alloc(size * sizeof[u32]());
   copy(Buffer { data : bitcast[&[i8]](connectivity.matrix), size : size * sizeof[u32](), device : 0 }, buf);
 
@@ -67,9 +74,13 @@ fn @subset_to_device(subset : &GridSubset) -> GridSubsetView {
 
   let count = subset.count as i32;
 
+  let indices = bitcast[&mut [1][u32]](buf.data);
   GridSubsetView {
     count : @|| count,
-    indices : @|u| bitcast[&[1][u32]](buf.data)(u as u32)
+    indices : @|u| indices(u as u32),
+
+    iterate : mk_iter_over_grid_subset(GenericU32View { read : @|u| indices(u as u32) },
+                                       subset)
   }
 }
 
