@@ -21,7 +21,8 @@ Clone this repository inside the `anydsl/` folder.
 mkdir path/to/anydsl/iconex/build
 cd "$_"  # the "$_" contains the argument to the previous command
 cmake -DBACKEND=cpu \
-      -DAnyDSL_runtime_DIR="$_"/../../runtime/build/share/anydsl/cmake/
+      -DAnyDSL_runtime_DIR=$PWD/../../runtime/build/share/anydsl/cmake/ \
+      ..
 make check
 ```
 
