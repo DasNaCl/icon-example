@@ -1,0 +1,22 @@
+#!@SHELL@
+
+ICON_GRID=${ICON_GRID:-'@abs_builddir@/grid.nc'}
+ICON_LVL_COUNT=${ICON_LVL_COUNT:-'40'}
+ICON_ITER_COUNT=${ICON_ITER_COUNT:-'50'}
+
+@OPENMP_ENABLED_TRUE@cpu_count=`grep -c processor /proc/cpuinfo` || cpu_count='4'
+@OPENMP_ENABLED_TRUE@max_OMP_NUM_THREADS=`expr ${cpu_count} / 2`
+@OPENMP_ENABLED_FALSE@max_OMP_NUM_THREADS='1'
+
+for div_function_name in 'generic' 'triangle'; do
+  echo "------------------------------"
+  echo "Div function name: ${div_function_name}"
+  for OMP_NUM_THREADS in `seq ${max_OMP_NUM_THREADS}`; do
+    export OMP_NUM_THREADS
+    echo "# threads: ${OMP_NUM_THREADS}"
+    { for _ in `seq ${ICON_ITER_COUNT}`; do
+        '@abs_builddir@/global_div' "${ICON_GRID}" "${ICON_LVL_COUNT}" "${div_function_name}" || exit 1
+      done } | @AWK@ '/Operation time, ms: / {sum+=$4; count+=1}END{print "Total runs:", count, "\nAverage time:", sum/count, "ms"}' || exit 1
+  done
+done
+
