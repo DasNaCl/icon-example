@@ -37,13 +37,36 @@ struct GridConnectivityView {
   matrix : fn(u32) -> u32
 };
 
+struct SubsetIterator {
+  output_pos : u32,
+  entity_idx : i32,
+  level_idx : u32,
+  level_count : u32,
+  trg_count : i32,
+
+  out_idx : fn() -> u32
+};
+
+fn @mk_subset_iterator(output_pos : u32, entity_idx : i32, level_idx : u32,
+                       level_count : u32, trg_count : i32) -> SubsetIterator {
+  SubsetIterator {
+    output_pos : output_pos,
+    entity_idx : entity_idx,
+    level_idx : level_idx,
+    level_count : level_count,
+    trg_count : trg_count,
+
+    out_idx : @|| output_pos + (level_idx as u32)
+  }
+}
+
 struct GridSubsetView {
   count : fn() -> i32,
   indices : fn(i32) -> u32,
 
   // At the moment, grid and entity are not needed
 
-  iterate : fn(u32, i32, fn(u32, i32, u32) -> ()) -> ()
+  iterate : fn(u32, i32, fn(SubsetIterator) -> ()) -> ()
 };
 
 struct GenericView {
@@ -57,14 +80,15 @@ struct GenericU32View {
 };
 
 
-fn @mk_iter_over_grid_subset(buf : GenericU32View, subset : &GridSubset) -> (fn(u32, i32, fn(u32, i32, u32) -> ()) -> ()) {
+fn @mk_iter_over_grid_subset(buf : GenericU32View, subset : &GridSubset) -> (fn(u32, i32, fn(SubsetIterator) -> ()) -> ()) {
   let count = subset.count as i32;
 
   @|lv_count,trg_count,body| {
     for output_idx in outer_loop(0, count as i32) {
       let entity_idx = (buf.read(output_idx as u32) as i32) * trg_count;
       for level_idx in inner_loop(0, lv_count as i32) {
-        @@body((output_idx as u32) * lv_count,entity_idx,level_idx as u32)
+        @@body(mk_subset_iterator((output_idx as u32) * lv_count, entity_idx, level_idx as u32,
+                                  lv_count, trg_count))
       }
     }
   }
@@ -101,12 +125,12 @@ fn @handle_io(out : &mut[f64], sub : &GridSubset, conn : &GridConnectivity,
   output_size)
 }
 
-fn @fetch_data(info : IterInfo, entity_idx : i32,
-               level_count : u32, level_idx : u32, trg_count : i32,
+fn @fetch_data(info : IterInfo, iter : SubsetIterator,
                body : fn(f64,f64) -> ()) -> () {
-  for connect_idx in unroll(0, trg_count) {
-    let flat_connect_idx = (entity_idx + connect_idx) as u32;
-    let flat_values_idx = info.connectivity.matrix(flat_connect_idx) * level_count + (level_idx as u32);
+  for connect_idx in unroll(0, iter.trg_count) {
+    let flat_connect_idx = (iter.entity_idx + connect_idx) as u32;
+    let flat_values_idx = info.connectivity.matrix(flat_connect_idx) * iter.level_count
+                        + (iter.level_idx as u32);
 
     @@body(info.values.read(flat_values_idx as u32), info.weights.read(flat_connect_idx as u32));
   }

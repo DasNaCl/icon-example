@@ -16,13 +16,13 @@ fn @generic_call(out : &mut[f64], sub : &GridSubset, conn : &GridConnectivity,
   let (io_info, output_size) = handle_io(out, sub, conn, vals, wghts, level_count);
 
   with benchmark_kernel() {
-    for output_pos, entity_idx, level_idx in io_info.subset.iterate(level_count, trg_count) {
-        let mut result = 0.0 as f64;
+    for iter in io_info.subset.iterate(level_count, trg_count) {
+      let mut result = 0.0 as f64;
 
-        for value, weight in fetch_data(io_info, entity_idx, level_count, level_idx, trg_count) {
+      for value, weight in fetch_data(io_info, iter) {
         result += value * weight;
-        }
-        io_info.output.write(output_pos + (level_idx as u32), result);
+      }
+      io_info.output.write(iter.out_idx(), result);
     }
   }
 
