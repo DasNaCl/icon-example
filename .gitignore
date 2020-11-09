@@ -23,3 +23,11 @@ legacy/tests/global_div.run
 legacy/tests/grid.nc
 legacy/tests/local_vel_filter.run
 legacy/tests/output
+legacy/src/basic_operators.o
+legacy/src/grid.o
+legacy/src/libicon_example.a
+legacy/src/utils.o
+legacy/tests/global_div
+legacy/tests/global_div.o
+legacy/tests/local_vel_filter
+legacy/tests/local_vel_filter.o
