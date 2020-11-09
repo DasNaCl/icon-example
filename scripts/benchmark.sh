@@ -20,6 +20,7 @@ for backend in $backends; do
   if [ $backend = "cpu" ] || [ $backend = "avx" ]; then
     for t in $(seq $max_threads); do
       cmake ../.. -DAnyDSL_runtime_DIR=$PWD/../../../runtime/build/share/anydsl/cmake/ \
+        -DCMAKE_BUILD_TYPE=release \
         -DBACKEND=$backend \
         -DNO_OF_THREADS=$t >/dev/null 2>&1
 
