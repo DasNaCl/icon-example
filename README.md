@@ -45,5 +45,6 @@ Suppose you want to run the benchmark script for `cpu`, `avx`, and `cuda`:
 ICONEX_BENCH="cpu avx cuda" make check
 ```
 
-TODO: Insert graph. :-)
+![](https://ghcdn.rawgit.org/DasNaCl/icon-example/master/anydsl-performance.svg)
+
 
